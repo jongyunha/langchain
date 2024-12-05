@@ -1,22 +1,32 @@
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
-
-from ouput_parser import CommandOutputParser
+from langchain.callbacks import StreamingStdOutCallbackHandler
 
 chat = ChatOpenAI(
-    temperature=0.5,
+    temperature=0.1,
+    streaming=True,
+    callbacks=[StreamingStdOutCallbackHandler()]
 )
 
-template = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are alist generating machine. Everything you are asked will be answered with a comma seperated list of max {max_items}. Do NOT reply with anything else."),
-    ("human", "{question}"),
+
+chef_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a world-class international chef. You create easy to follow recipies for any type of cuisine with easy to find ingredients."),
+    ("human", "I want to cook {cuisine} food.")
 ])
 
-chain = template | chat | CommandOutputParser()
-response = chain.invoke({
-    "max_items": 5,
-    "question": "What are the popular npm packages?"
+chef_chain = chef_prompt | chat
+
+veg_chef_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a vegetarian chef specialized on making traditional recipes vegetarian. You find alternative ingredients and explain their preparation. You don't radically modify the recipe. If there is no alternative for a food just say you don't know how to recipe it."),
+    ("human", "{recipe}")
+])
+
+veg_chef_chain = veg_chef_prompt | chat
+
+final_chain = {"recipe": chef_chain} | veg_chef_chain
+
+response = final_chain.invoke({
+    "cuisine": "Italian"
 })
 
-print(response)
+print(response.content)
